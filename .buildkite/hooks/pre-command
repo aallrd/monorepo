@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+if [[ "${MONOREPO_BUILDKITE_OCI_LOGIN:-}" != "1" ]]; then
+  exit 0
+fi
+
+registry="${MONOREPO_BUILDKITE_OCI_REGISTRY:?MONOREPO_BUILDKITE_OCI_REGISTRY is required}"
+
+buildkite-agent oidc request-token \
+  --audience "https://${registry}" \
+  --lifetime 300 \
+  | docker login "${registry}" --username buildkite --password-stdin

@@ -1,0 +1,13 @@
+# Owns toolchain validation routing for the selected platform. The concrete
+# compiler/linker definitions live in the sibling toolchain packages.
+package(default_visibility = ["//visibility:public"])
+
+alias(
+    name = "validate_current_toolchain",
+    actual = select({
+        "//build/platforms:is_macos_arm64": "//build/toolchains/clang_macos_arm64:validate",
+        "//build/platforms:is_rhel_amd64_clang": "//build/toolchains/clang_rhel_amd64:validate",
+        "//build/platforms:is_rhel_amd64_gcc": "//build/toolchains/gcc_rhel_amd64:validate",
+        "//build/platforms:is_windows_amd64": "//build/toolchains/msvc_windows_amd64:validate",
+    }),
+)

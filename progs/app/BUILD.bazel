@@ -1,0 +1,9 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary")
+
+package(features = ["warnings_as_errors"])
+
+cc_binary(
+    name = "sample_cpp",
+    srcs = ["src/main.cc"],
+    deps = ["//lib/sample:sample_cpp"],
+)

@@ -1,0 +1,112 @@
+# Owns the Clang RHEL amd64 C++ toolchain implementation used by Linux Clang
+# builds and UBSan: fixed root paths, sysroot, flags, and validation.
+load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")
+load("//build/toolchains:cc_toolchain_config.bzl", "fixed_cc_toolchain_config")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(name = "empty")
+
+fixed_cc_toolchain_config(
+    name = "config",
+    abi_libc_version = "rhel8",
+    abi_version = "clang-rhel8",
+    builtin_sysroot = "/opt/toolchains/clang-rhel-amd64/sysroot",
+    compile_flags = [
+        "-std=c++20",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "--sysroot=/opt/toolchains/clang-rhel-amd64/sysroot",
+    ],
+    compiler = "clang-linux",
+    cxx_builtin_include_directories = [
+        "/opt/toolchains/clang-rhel-amd64/include/c++/v1",
+        "/opt/toolchains/clang-rhel-amd64/lib/clang/REPLACE_WITH_CLANG_RESOURCE_VERSION/include",
+        "/opt/toolchains/clang-rhel-amd64/sysroot/usr/include",
+    ],
+    dbg_compile_flags = [
+        "-O0",
+        "-g",
+    ],
+    fastbuild_compile_flags = [
+        "-O0",
+        "-g1",
+    ],
+    host_system_name = "local",
+    link_flags = [
+        "--sysroot=/opt/toolchains/clang-rhel-amd64/sysroot",
+    ],
+    opt_compile_flags = [
+        "-O2",
+        "-DNDEBUG",
+    ],
+    target_cpu = "x86_64",
+    target_libc = "rhel8",
+    target_system_name = "rhel8",
+    tool_paths = {
+        "ar": "/opt/toolchains/clang-rhel-amd64/bin/llvm-ar",
+        "cpp": "/opt/toolchains/clang-rhel-amd64/bin/clang++",
+        "dwp": "/opt/toolchains/clang-rhel-amd64/bin/llvm-dwp",
+        "gcc": "/opt/toolchains/clang-rhel-amd64/bin/clang",
+        "gcov": "/opt/toolchains/clang-rhel-amd64/bin/llvm-cov",
+        "ld": "/opt/toolchains/clang-rhel-amd64/bin/clang++",
+        "nm": "/opt/toolchains/clang-rhel-amd64/bin/llvm-nm",
+        "objcopy": "/opt/toolchains/clang-rhel-amd64/bin/llvm-objcopy",
+        "objdump": "/opt/toolchains/clang-rhel-amd64/bin/llvm-objdump",
+        "strip": "/opt/toolchains/clang-rhel-amd64/bin/llvm-strip",
+    },
+    toolchain_identifier = "clang-rhel8-amd64",
+    warnings_as_errors_flags = ["-Werror"],
+)
+
+cc_toolchain(
+    name = "cc_toolchain_impl",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":config",
+    toolchain_identifier = "clang-rhel8-amd64",
+)
+
+toolchain(
+    name = "cc_toolchain",
+    exec_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    target_compatible_with = [
+        "//build/platforms:compiler_clang",
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    toolchain = ":cc_toolchain_impl",
+    toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+)
+
+genrule(
+    name = "validate",
+    outs = ["validate.txt"],
+    cmd = """
+set -eu
+root="/opt/toolchains/clang-rhel-amd64"
+for path in \
+    "$$root/bin/clang" \
+    "$$root/bin/clang++" \
+    "$$root/bin/llvm-ar" \
+    "$$root/bin/llvm-strip"; do
+  test -x "$$path" || { echo "Missing executable: $$path" >&2; exit 1; }
+done
+test -d "$$root/sysroot" || { echo "Missing Clang sysroot: $$root/sysroot" >&2; exit 1; }
+echo "validated clang-rhel8-amd64" > "$@"
+""",
+    target_compatible_with = [
+        "//build/platforms:compiler_clang",
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)

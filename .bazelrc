@@ -1,0 +1,40 @@
+common --enable_platform_specific_config
+common --lockfile_mode=error
+
+build --nosandbox_default_allow_network
+build --verbose_failures
+
+test --test_output=errors
+
+# POSIX platforms use Bazel's best available sandbox strategy. Windows builds are
+# hermetic through pinned runners, fixed tool paths, and no ambient action env.
+build:macos --spawn_strategy=sandboxed
+build:macos --genrule_strategy=sandboxed
+build:macos --worker_sandboxing
+build:macos --platforms=//build/platforms:macos_arm64
+build:macos --extra_toolchains=//build/toolchains/clang_macos_arm64:cc_toolchain
+
+build:linux --spawn_strategy=sandboxed
+build:linux --genrule_strategy=sandboxed
+build:linux --worker_sandboxing
+build:linux --platforms=//build/platforms:rhel_amd64_gcc
+build:linux --extra_toolchains=//build/toolchains/gcc_rhel_amd64:cc_toolchain
+
+build:linux-clang --platforms=//build/platforms:rhel_amd64_clang
+build:linux-clang --extra_toolchains=//build/toolchains/clang_rhel_amd64:cc_toolchain
+build:linux-clang-ubsan --config=linux-clang
+build:linux-clang-ubsan --config=ubsan
+
+build:windows --platforms=//build/platforms:windows_amd64
+build:windows --extra_toolchains=//build/toolchains/msvc_windows_amd64:cc_toolchain
+build:windows --features=shorten_virtual_includes
+
+# POSIX-only sanitizer configs. MSVC sanitizer support is intentionally not wired
+# until the Windows SDK/toolset contract is filled in.
+build:asan --strip=never
+build:asan --copt=-fsanitize=address
+build:asan --linkopt=-fsanitize=address
+
+build:ubsan --strip=never
+build:ubsan --copt=-fsanitize=undefined
+build:ubsan --linkopt=-fsanitize=undefined

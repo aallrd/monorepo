@@ -1,0 +1,5 @@
+bazel-*
+third_party/bazel/
+.DS_Store
+target/
+.m2/

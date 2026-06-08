@@ -1,0 +1,113 @@
+# Owns the local Windows amd64 MSVC C++ toolchain template: fixed root paths,
+# compiler/linker flags, SDK placeholders, and validation.
+load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")
+load("//build/toolchains:cc_toolchain_config.bzl", "fixed_cc_toolchain_config")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(name = "empty")
+
+fixed_cc_toolchain_config(
+    name = "config",
+    abi_libc_version = "windows-sdk-template",
+    abi_version = "vs2022",
+    compile_flags = [
+        "/std:c++20",
+        "/W4",
+        "/EHsc",
+        "/permissive-",
+        "/Zc:__cplusplus",
+        "/nologo",
+    ],
+    compiler = "msvc-vs2022",
+    cxx_builtin_include_directories = [
+        "C:/toolchains/msvc-windows-amd64/include/msvc",
+        "C:/toolchains/msvc-windows-amd64/include/ucrt",
+        "C:/toolchains/msvc-windows-amd64/include/um",
+        "C:/toolchains/msvc-windows-amd64/include/shared",
+    ],
+    dbg_compile_flags = [
+        "/Od",
+        "/Zi",
+    ],
+    dbg_link_flags = ["/DEBUG"],
+    fastbuild_compile_flags = [
+        "/Od",
+        "/Zi",
+    ],
+    host_system_name = "local",
+    link_flags = ["/NOLOGO"],
+    opt_compile_flags = [
+        "/O2",
+        "/DNDEBUG",
+    ],
+    supports_pic = False,
+    target_cpu = "x64_windows",
+    target_libc = "windows-sdk-template",
+    target_system_name = "windows",
+    tool_paths = {
+        "ar": "C:/toolchains/msvc-windows-amd64/bin/lib.exe",
+        "cpp": "C:/toolchains/msvc-windows-amd64/bin/cl.exe",
+        "dwp": "C:/toolchains/msvc-windows-amd64/bin/dwp.exe",
+        "gcc": "C:/toolchains/msvc-windows-amd64/bin/cl.exe",
+        "gcov": "C:/toolchains/msvc-windows-amd64/bin/gcov.exe",
+        "ld": "C:/toolchains/msvc-windows-amd64/bin/link.exe",
+        "nm": "C:/toolchains/msvc-windows-amd64/bin/dumpbin.exe",
+        "objcopy": "C:/toolchains/msvc-windows-amd64/bin/llvm-objcopy.exe",
+        "objdump": "C:/toolchains/msvc-windows-amd64/bin/dumpbin.exe",
+        "strip": "C:/toolchains/msvc-windows-amd64/bin/strip.exe",
+    },
+    toolchain_identifier = "msvc-vs2022-windows-sdk-template-amd64",
+    warnings_as_errors_flags = ["/WX"],
+)
+
+cc_toolchain(
+    name = "cc_toolchain_impl",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 1,
+    toolchain_config = ":config",
+    toolchain_identifier = "msvc-vs2022-windows-sdk-template-amd64",
+)
+
+toolchain(
+    name = "cc_toolchain",
+    exec_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    toolchain = ":cc_toolchain_impl",
+    toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+)
+
+genrule(
+    name = "validate",
+    outs = ["validate.txt"],
+    cmd_bat = """
+@echo off
+set ROOT=C:\\toolchains\\msvc-windows-amd64
+for %%P in ("%ROOT%\\bin\\cl.exe" "%ROOT%\\bin\\link.exe" "%ROOT%\\bin\\lib.exe" "%ROOT%\\bin\\rc.exe" "%ROOT%\\bin\\mt.exe") do (
+  if not exist %%P (
+    echo Missing executable: %%P 1>&2
+    exit /b 1
+  )
+)
+if not exist "%ROOT%\\include\\windows-sdk-template" (
+  echo Replace Windows SDK template values under %ROOT% before using the Windows local development build. 1>&2
+  exit /b 1
+)
+echo validated msvc-vs2022-windows-sdk-template-amd64 > "$@"
+""",
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+)

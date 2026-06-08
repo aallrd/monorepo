@@ -1,0 +1,107 @@
+# Owns the GCC RHEL amd64 C++ toolchain implementation: fixed root paths,
+# compiler/linker flags, and validation.
+load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")
+load("//build/toolchains:cc_toolchain_config.bzl", "fixed_cc_toolchain_config")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(name = "empty")
+
+fixed_cc_toolchain_config(
+    name = "config",
+    abi_libc_version = "rhel8",
+    abi_version = "gcc-toolset-11",
+    compile_flags = [
+        "-std=c++20",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+    ],
+    compiler = "gcc-11",
+    cxx_builtin_include_directories = [
+        "/opt/toolchains/gcc-rhel-amd64/root/usr/include/c++/11",
+        "/opt/toolchains/gcc-rhel-amd64/root/usr/include/c++/11/x86_64-redhat-linux",
+        "/opt/toolchains/gcc-rhel-amd64/root/usr/lib/gcc/x86_64-redhat-linux/11/include",
+        "/usr/include",
+    ],
+    dbg_compile_flags = [
+        "-O0",
+        "-g",
+    ],
+    fastbuild_compile_flags = [
+        "-O0",
+        "-g1",
+    ],
+    host_system_name = "local",
+    link_flags = [],
+    opt_compile_flags = [
+        "-O2",
+        "-DNDEBUG",
+    ],
+    target_cpu = "x86_64",
+    target_libc = "rhel8",
+    target_system_name = "rhel8",
+    tool_paths = {
+        "ar": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/gcc-ar",
+        "cpp": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/cpp",
+        "dwp": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/dwp",
+        "gcc": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/gcc",
+        "gcov": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/gcov",
+        "ld": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/g++",
+        "nm": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/gcc-nm",
+        "objcopy": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/objcopy",
+        "objdump": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/objdump",
+        "strip": "/opt/toolchains/gcc-rhel-amd64/root/usr/bin/strip",
+    },
+    toolchain_identifier = "gcc-toolset-11-rhel8-amd64",
+    warnings_as_errors_flags = ["-Werror"],
+)
+
+cc_toolchain(
+    name = "cc_toolchain_impl",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":config",
+    toolchain_identifier = "gcc-toolset-11-rhel8-amd64",
+)
+
+toolchain(
+    name = "cc_toolchain",
+    exec_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    target_compatible_with = [
+        "//build/platforms:compiler_gcc",
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+    toolchain = ":cc_toolchain_impl",
+    toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+)
+
+genrule(
+    name = "validate",
+    outs = ["validate.txt"],
+    cmd = """
+set -eu
+root="/opt/toolchains/gcc-rhel-amd64"
+for path in \
+    "$$root/root/usr/bin/gcc" \
+    "$$root/root/usr/bin/g++" \
+    "$$root/root/usr/bin/gcc-ar" \
+    "$$root/root/usr/bin/strip"; do
+  test -x "$$path" || { echo "Missing executable: $$path" >&2; exit 1; }
+done
+echo "validated gcc-toolset-11-rhel8-amd64" > "$@"
+""",
+    target_compatible_with = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:linux",
+    ],
+)

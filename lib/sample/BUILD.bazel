@@ -1,0 +1,22 @@
+load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = ["warnings_as_errors"],
+)
+
+cc_library(
+    name = "sample_cpp",
+    srcs = ["src/greeting.cc"],
+    hdrs = ["include/sample_cpp/greeting.h"],
+    strip_include_prefix = "include",
+)
+
+cc_test(
+    name = "greeting_test",
+    srcs = ["tests/greeting_test.cc"],
+    deps = [
+        ":sample_cpp",
+        "@googletest//:gtest_main",
+    ],
+)

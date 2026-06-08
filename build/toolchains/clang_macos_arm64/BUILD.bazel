@@ -1,0 +1,122 @@
+# Owns the local macOS arm64 Homebrew LLVM C++ toolchain implementation: fixed
+# Homebrew/CLT roots, compiler/linker flags, and validation.
+load("@rules_cc//cc/toolchains:cc_toolchain.bzl", "cc_toolchain")
+load("//build/toolchains:cc_toolchain_config.bzl", "fixed_cc_toolchain_config")
+
+package(default_visibility = ["//visibility:public"])
+
+filegroup(name = "empty")
+
+fixed_cc_toolchain_config(
+    name = "config",
+    abi_libc_version = "macosx26.2",
+    abi_version = "darwin_arm64",
+    builtin_sysroot = "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk",
+    compile_flags = [
+        "-std=c++20",
+        "-Wall",
+        "-Wextra",
+        "-Wpedantic",
+        "-Wno-error=character-conversion",
+        "-isysroot",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk",
+        "-mmacosx-version-min=15.0",
+    ],
+    compiler = "homebrew-clang-22.1.6",
+    cxx_builtin_include_directories = [
+        "/opt/homebrew/Cellar/llvm/22.1.6/include/c++/v1",
+        "/opt/homebrew/Cellar/llvm/22.1.6/lib/clang/22/include",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/usr/include",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/System/Library/Frameworks",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk/System/Library/SubFrameworks",
+    ],
+    dbg_compile_flags = [
+        "-O0",
+        "-g",
+    ],
+    fastbuild_compile_flags = [
+        "-O0",
+        "-gmlt",
+    ],
+    host_system_name = "local",
+    link_flags = [
+        "-isysroot",
+        "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk",
+        "-mmacosx-version-min=15.0",
+        "-lc++",
+    ],
+    opt_compile_flags = [
+        "-O2",
+        "-DNDEBUG",
+    ],
+    target_cpu = "darwin_arm64",
+    target_libc = "macosx",
+    target_system_name = "darwin",
+    tool_paths = {
+        "ar": "/opt/homebrew/Cellar/llvm/22.1.6/bin/llvm-libtool-darwin",
+        "cpp": "/opt/homebrew/Cellar/llvm/22.1.6/bin/clang++",
+        "dwp": "/opt/homebrew/Cellar/llvm/22.1.6/bin/llvm-dwp",
+        "gcc": "/opt/homebrew/Cellar/llvm/22.1.6/bin/clang",
+        "gcov": "/opt/homebrew/Cellar/llvm/22.1.6/bin/llvm-cov",
+        "ld": "/opt/homebrew/Cellar/llvm/22.1.6/bin/clang++",
+        "nm": "/opt/homebrew/Cellar/llvm/22.1.6/bin/llvm-nm",
+        "objcopy": "/opt/homebrew/Cellar/llvm/22.1.6/bin/llvm-objcopy",
+        "objdump": "/opt/homebrew/Cellar/llvm/22.1.6/bin/llvm-objdump",
+        "strip": "/opt/homebrew/Cellar/llvm/22.1.6/bin/llvm-strip",
+    },
+    toolchain_identifier = "homebrew-llvm-22.1.6-clt-macosx26-arm64",
+    warnings_as_errors_flags = ["-Werror"],
+)
+
+cc_toolchain(
+    name = "cc_toolchain_impl",
+    all_files = ":empty",
+    compiler_files = ":empty",
+    dwp_files = ":empty",
+    linker_files = ":empty",
+    objcopy_files = ":empty",
+    strip_files = ":empty",
+    supports_param_files = 0,
+    toolchain_config = ":config",
+    toolchain_identifier = "homebrew-llvm-22.1.6-clt-macosx26-arm64",
+)
+
+toolchain(
+    name = "cc_toolchain",
+    exec_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
+    toolchain = ":cc_toolchain_impl",
+    toolchain_type = "@bazel_tools//tools/cpp:toolchain_type",
+)
+
+genrule(
+    name = "validate",
+    outs = ["validate.txt"],
+    cmd = """
+set -eu
+root="/opt/homebrew/Cellar/llvm/22.1.6"
+for path in \
+    "$$root/bin/clang" \
+    "$$root/bin/clang++" \
+    "$$root/bin/llvm-libtool-darwin" \
+    "$$root/bin/llvm-strip" \
+    "$$root/bin/llvm-nm" \
+    "$$root/bin/llvm-objdump"; do
+  test -x "$$path" || { echo "Missing executable: $$path" >&2; exit 1; }
+done
+test -f "$$root/etc/clang/arm64-apple-darwin25.cfg" || { echo "Missing Homebrew Clang config: $$root/etc/clang/arm64-apple-darwin25.cfg" >&2; exit 1; }
+test -d "/Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk" || { echo "Missing CLT macOS SDK: /Library/Developer/CommandLineTools/SDKs/MacOSX26.sdk" >&2; exit 1; }
+"$$root/bin/clang" --version | grep -F "Homebrew clang version 22.1.6" >/dev/null || { echo "Unexpected clang version at $$root/bin/clang" >&2; exit 1; }
+echo "validated homebrew-llvm-22.1.6-clt-macosx26-arm64" > "$@"
+""",
+    target_compatible_with = [
+        "@platforms//cpu:arm64",
+        "@platforms//os:macos",
+    ],
+)
