@@ -94,7 +94,7 @@ the checked-in Bazel lockfile.
 
 ## CI
 
-`build/ci/images.yaml` is the single source for Linux CI jobs, OCI image build
+`build/ci/images.json` is the single source for Linux CI jobs, OCI image build
 definitions, Docker-capable Buildkite queues, and Jenkins Kubernetes pod
 runtime metadata. CI runs only on Linux:
 
@@ -104,18 +104,16 @@ runtime metadata. CI runs only on Linux:
 
 macOS and Windows are local development platforms, not CI jobs.
 
-Buildkite uses `.buildkite/generate_pipeline.py`; the bootstrap step runs it
-with `uv run --script`, installing `uv` with Astral's standalone installer when
-the queue image does not already provide it. The step writes the generated
-pipeline to an artifact, validates it with `pipeline upload --dry-run`, and
-uploads it with `--replace`. Generated Buildkite jobs keep queue selection
-separate from the build environment: queues provide Docker-capable capacity,
-while the pinned Docker plugin runs each job inside the OCI image declared in
-`images.yaml`.
+Buildkite uses `.buildkite/generate_pipeline.py`; the bootstrap step runs the
+stdlib-only generator with Python, writes the generated pipeline to an artifact,
+validates it with `pipeline upload --dry-run`, and uploads it with `--replace`.
+Generated Buildkite jobs keep queue selection separate from the build
+environment: queues provide Docker-capable capacity, while the pinned Docker
+plugin runs each job inside the OCI image declared in `images.json`.
 On non-`main` branches, generated Buildkite steps use `if_changed` scopes from
-`images.yaml` so unrelated C++ and Java slices can be skipped. `main` builds
+`images.json` so unrelated C++ and Java slices can be skipped. `main` builds
 omit `if_changed` and run the full generated matrix.
-Jenkins assumes the Pipeline Utility Steps plugin for `readYaml` and the JUnit
+Jenkins assumes the Pipeline Utility Steps plugin for `readJSON` and the JUnit
 plugin for Maven Surefire report publishing.
 
 ## Java Maven Slice

@@ -1,6 +1,6 @@
 # Owns machine constraints and platform labels only. Compiler paths, sysroots,
 # and flags belong to build/toolchains; runner/image metadata belongs to
-# build/ci/images.yaml.
+# build/ci/images.json.
 package(default_visibility = ["//visibility:public"])
 
 constraint_setting(name = "compiler")

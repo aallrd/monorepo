@@ -9,7 +9,7 @@ pipeline {
             node(POD_LABEL) {
               checkout scm
 
-              def ci = readYaml(file: 'build/ci/images.yaml').ci
+              def ci = readJSON(file: 'build/ci/images.json').ci
               def jenkinsConfig = ci.registries.jenkins
               def registryEnv = jenkinsConfig.env as String
               if (!env[registryEnv]) {
@@ -39,7 +39,7 @@ pipeline {
             node(POD_LABEL) {
               checkout scm
 
-              ci = readYaml(file: 'build/ci/images.yaml').ci
+              ci = readJSON(file: 'build/ci/images.json').ci
               gitCommit = env.GIT_COMMIT ?: sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
 
               jenkinsConfig = ci.registries.jenkins
@@ -130,7 +130,7 @@ spec:
             node(POD_LABEL) {
               checkout scm
 
-              ci = readYaml(file: 'build/ci/images.yaml').ci
+              ci = readJSON(file: 'build/ci/images.json').ci
               gitCommit = env.GIT_COMMIT ?: sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
 
               jenkinsConfig = ci.registries.jenkins

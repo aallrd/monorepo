@@ -1,6 +1,6 @@
 # CI Image Contract
 
-`images.yaml` is the source of truth for the current CI runtime contract:
+`images.json` is the source of truth for the current CI runtime contract:
 Linux CI queues, OCI image build definitions, Buildkite change scopes, command
 lists, test report paths, artifact paths, Buildkite registry metadata, and
 Jenkins Kubernetes runtime metadata.
@@ -32,7 +32,7 @@ the same Dockerfiles to `MONOREPO_OCI_REGISTRY` with Kaniko.
 Buildkite generated steps use `if_changed` on non-`main` branches to avoid
 running unrelated monorepo slices. The generated pipeline omits `if_changed` on
 `main`, so post-merge builds remain full validation. Change scopes are declared
-in `images.yaml`:
+in `images.json`:
 
 - `global` covers Buildkite and CI contract files. Any match runs all generated
   Buildkite image publish and job steps.
@@ -73,14 +73,14 @@ Provider-specific behavior stays in the thin CI adapters:
   audit/debugging, and then uploads it with `--replace` so retries do not create
   duplicate pending steps.
 - The static Buildkite bootstrap step lives in `.buildkite/pipeline.yml`. It
-  runs the generator with `uv run --script`, installing `uv` with the standalone
-  installer when needed; Buildkite supplies `buildkite-agent`.
+  runs the stdlib-only generator with Python; Buildkite supplies
+  `buildkite-agent`.
 - Jenkins publishes Surefire XML from `reports.junit` with `junit` and archives
   paths from `artifacts`.
 
 Before relying on CI as a production signal:
 
-1. Ensure the Buildkite queue keys in `images.yaml` exist in the target cluster
+1. Ensure the Buildkite queue keys in `images.json` exist in the target cluster
    and run Docker-capable agents.
 2. Create the Buildkite Package Registry `monorepo-images` and grant this
    pipeline `read_packages` and `write_packages` through its OIDC policy.

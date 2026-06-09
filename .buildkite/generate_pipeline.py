@@ -1,21 +1,8 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.9"
-# dependencies = [
-#   "PyYAML==6.0.2",
-# ]
-# ///
+#!/usr/bin/env python3
 
+import json
 import os
 from pathlib import Path
-
-try:
-    import yaml
-except ModuleNotFoundError as exc:
-    raise SystemExit(
-        "PyYAML is required to generate the Buildkite pipeline. "
-        "Run this script with `uv run --script .buildkite/generate_pipeline.py`."
-    ) from exc
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -123,9 +110,79 @@ def docker_plugin(image_ref, job):
     }
 
 
+def yaml_key(value):
+    return json.dumps(str(value))
+
+
+def yaml_scalar(value):
+    if isinstance(value, (dict, list)):
+        return None
+    if isinstance(value, str):
+        if "\n" in value:
+            return None
+        return json.dumps(value)
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return str(value)
+    raise TypeError(f"Unsupported YAML value: {value!r}")
+
+
+def append_multiline_string(lines, value, indent):
+    spaces = " " * indent
+    for line in value.splitlines():
+        lines.append(f"{spaces}{line}")
+    if value.endswith("\n"):
+        lines.append(spaces)
+
+
+def append_yaml(lines, value, indent=0):
+    spaces = " " * indent
+    if isinstance(value, dict):
+        for key, item in value.items():
+            scalar = yaml_scalar(item)
+            if scalar is not None:
+                lines.append(f"{spaces}{yaml_key(key)}: {scalar}")
+            elif isinstance(item, str):
+                lines.append(f"{spaces}{yaml_key(key)}: |")
+                append_multiline_string(lines, item, indent + 2)
+            else:
+                lines.append(f"{spaces}{yaml_key(key)}:")
+                append_yaml(lines, item, indent + 2)
+        return
+
+    if isinstance(value, list):
+        for item in value:
+            scalar = yaml_scalar(item)
+            if scalar is not None:
+                lines.append(f"{spaces}- {scalar}")
+            elif isinstance(item, str):
+                lines.append(f"{spaces}- |")
+                append_multiline_string(lines, item, indent + 2)
+            else:
+                lines.append(f"{spaces}-")
+                append_yaml(lines, item, indent + 2)
+        return
+
+    scalar = yaml_scalar(value)
+    if scalar is None:
+        lines.append(f"{spaces}|")
+        append_multiline_string(lines, value, indent + 2)
+    else:
+        lines.append(f"{spaces}{scalar}")
+
+
+def dump_yaml(value):
+    lines = []
+    append_yaml(lines, value)
+    return "\n".join(lines) + "\n"
+
+
 def main():
-    with (ROOT / "build" / "ci" / "images.yaml").open("r", encoding="utf-8") as handle:
-        config = yaml.safe_load(handle)
+    with (ROOT / "build" / "ci" / "images.json").open("r", encoding="utf-8") as handle:
+        config = json.load(handle)
 
     ci = config["ci"]
     registry = ci["registries"]["buildkite"]["ref_prefix"]
@@ -166,7 +223,7 @@ def main():
             step["artifact_paths"] = job["artifacts"]
         steps.append(step)
 
-    print(yaml.safe_dump({"steps": steps}, sort_keys=False), end="")
+    print(dump_yaml({"steps": steps}), end="")
 
 
 if __name__ == "__main__":
