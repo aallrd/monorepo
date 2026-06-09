@@ -23,7 +23,12 @@ fixed_cc_toolchain_config(
     cxx_builtin_include_directories = [
         "/opt/toolchains/clang-rhel-amd64/include/c++/v1",
         "/opt/toolchains/clang-rhel-amd64/lib/clang/REPLACE_WITH_CLANG_RESOURCE_VERSION/include",
+        "/opt/toolchains/clang-rhel-amd64/sysroot/include",
+        "/opt/toolchains/clang-rhel-amd64/sysroot/include/c++/11",
+        "/opt/toolchains/clang-rhel-amd64/sysroot/include/x86_64-linux-gnu",
+        "/opt/toolchains/clang-rhel-amd64/sysroot/include/x86_64-linux-gnu/c++/11",
         "/opt/toolchains/clang-rhel-amd64/sysroot/usr/include",
+        "/usr/lib/llvm-14/lib/clang/14.0.0/include",
     ],
     dbg_compile_flags = [
         "-O0",

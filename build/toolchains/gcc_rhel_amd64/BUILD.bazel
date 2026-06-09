@@ -22,6 +22,10 @@ fixed_cc_toolchain_config(
         "/opt/toolchains/gcc-rhel-amd64/root/usr/include/c++/11",
         "/opt/toolchains/gcc-rhel-amd64/root/usr/include/c++/11/x86_64-redhat-linux",
         "/opt/toolchains/gcc-rhel-amd64/root/usr/lib/gcc/x86_64-redhat-linux/11/include",
+        "/usr/include/c++/11",
+        "/usr/include/x86_64-linux-gnu",
+        "/usr/include/x86_64-linux-gnu/c++/11",
+        "/usr/lib/gcc/x86_64-linux-gnu/11/include",
         "/usr/include",
     ],
     dbg_compile_flags = [

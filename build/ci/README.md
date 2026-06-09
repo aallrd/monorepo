@@ -73,8 +73,7 @@ Provider-specific behavior stays in the thin CI adapters:
   audit/debugging, and then uploads it with `--replace` so retries do not create
   duplicate pending steps.
 - The static Buildkite bootstrap step lives in `.buildkite/pipeline.yml`. It
-  assumes the selected queue provides Python 3 and pip; Buildkite supplies
-  `buildkite-agent`.
+  assumes the selected queue provides `uv`; Buildkite supplies `buildkite-agent`.
 - Jenkins publishes Surefire XML from `reports.junit` with `junit` and archives
   paths from `artifacts`.
 

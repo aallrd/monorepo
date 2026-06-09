@@ -7,8 +7,7 @@ steps:
       BUILDKITE_FETCH_DIFF_BASE: "true"
     command: |
       set -euo pipefail
-      python3 -m pip install --user --disable-pip-version-check --requirement build/ci/requirements.txt
-      python3 .buildkite/generate_pipeline.py > .buildkite/generated-pipeline.yml
+      uv run --script .buildkite/generate_pipeline.py > .buildkite/generated-pipeline.yml
       buildkite-agent pipeline upload --dry-run < .buildkite/generated-pipeline.yml > /dev/null
       buildkite-agent artifact upload .buildkite/generated-pipeline.yml
       buildkite-agent pipeline upload --replace .buildkite/generated-pipeline.yml

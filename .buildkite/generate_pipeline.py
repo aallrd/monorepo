@@ -1,4 +1,10 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
+# /// script
+# requires-python = ">=3.9"
+# dependencies = [
+#   "PyYAML==6.0.2",
+# ]
+# ///
 
 import os
 from pathlib import Path
@@ -8,7 +14,7 @@ try:
 except ModuleNotFoundError as exc:
     raise SystemExit(
         "PyYAML is required to generate the Buildkite pipeline. "
-        "Install build/ci/requirements.txt before running this script."
+        "Run this script with `uv run --script .buildkite/generate_pipeline.py`."
     ) from exc
 
 
