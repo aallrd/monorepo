@@ -2,6 +2,35 @@
 # build/platforms and build/toolchains; OCI images here provide the Linux build
 # environments that CI runs through Buildkite Docker jobs or Jenkins pods.
 ci:
+  if_changed:
+    enabled: true
+    run_all_branches:
+      - main
+
+  change_scopes:
+    global:
+      - .buildkite/**
+      - build/ci/images.yaml
+      - build/ci/requirements.txt
+
+    cpp:
+      - .bazelrc
+      - .bazelversion
+      - MODULE.bazel
+      - MODULE.bazel.lock
+      - build/ci/images/cpp-bazel/**
+      - build/platforms/**
+      - build/toolchains/**
+      - lib/sample/**
+      - progs/app/**
+      - tools/buildifier/**
+
+    java:
+      - .mvn/**
+      - build/ci/images/java-maven/**
+      - components/sample/**
+      - pom.xml
+
   registries:
     buildkite:
       ref_prefix: packages.buildkite.com/aallrd/monorepo-images
@@ -34,6 +63,9 @@ ci:
       runner:
         buildkite_queue: linux-medium
       image: cpp_bazel
+      change_scopes:
+        - global
+        - cpp
       commands:
         - bazel build //build/toolchains:validate_current_toolchain
         - bazel build //...
@@ -45,6 +77,9 @@ ci:
       runner:
         buildkite_queue: linux-large
       image: cpp_bazel
+      change_scopes:
+        - global
+        - cpp
       commands:
         - bazel build --config=linux-clang //build/toolchains/clang_rhel_amd64:validate
         - bazel build --config=linux-clang-ubsan //...
@@ -55,6 +90,9 @@ ci:
       runner:
         buildkite_queue: linux-medium
       image: java_maven
+      change_scopes:
+        - global
+        - java
       commands:
         - mvn --batch-mode --no-transfer-progress verify
       reports:

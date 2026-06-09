@@ -110,6 +110,9 @@ to an artifact, validates it with `pipeline upload --dry-run`, and uploads it
 with `--replace`. Generated Buildkite jobs keep queue selection separate from
 the build environment: queues provide Docker-capable capacity, while the pinned
 Docker plugin runs each job inside the OCI image declared in `images.yaml`.
+On non-`main` branches, generated Buildkite steps use `if_changed` scopes from
+`images.yaml` so unrelated C++ and Java slices can be skipped. `main` builds
+omit `if_changed` and run the full generated matrix.
 Jenkins assumes the Pipeline Utility Steps plugin for `readYaml` and the JUnit
 plugin for Maven Surefire report publishing.
 

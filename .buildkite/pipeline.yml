@@ -2,6 +2,9 @@ steps:
   - label: ":pipeline: generate"
     agents:
       queue: linux-small
+    env:
+      BUILDKITE_GIT_DIFF_BASE: origin/main
+      BUILDKITE_FETCH_DIFF_BASE: "true"
     command: |
       set -euo pipefail
       python3 -m pip install --user --disable-pip-version-check --requirement build/ci/requirements.txt

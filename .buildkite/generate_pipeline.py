@@ -22,7 +22,56 @@ def buildkite_ref(registry, image, commit):
     return f"{registry}/{image['name']}:{commit}"
 
 
-def image_publish_step(key, image, registry, commit):
+def unique_values(values):
+    seen = set()
+    result = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
+
+
+def expand_change_scopes(ci, scope_names):
+    scopes = ci.get("change_scopes", {})
+    patterns = []
+    for scope_name in scope_names:
+        if scope_name not in scopes:
+            raise SystemExit(f"Unknown Buildkite change scope: {scope_name}")
+        scope_patterns = scopes[scope_name]
+        if not isinstance(scope_patterns, list) or not scope_patterns:
+            raise SystemExit(f"Buildkite change scope {scope_name!r} must be a non-empty list")
+        patterns.extend(scope_patterns)
+    return unique_values(patterns)
+
+
+def scoped_patterns(ci, item):
+    return expand_change_scopes(ci, item.get("change_scopes", []))
+
+
+def should_emit_if_changed(ci, branch):
+    config = ci.get("if_changed", {})
+    if not config.get("enabled", False):
+        return False
+    return branch not in config.get("run_all_branches", [])
+
+
+def apply_if_changed(step, patterns, enabled):
+    if enabled and patterns:
+        step["if_changed"] = patterns
+    return step
+
+
+def image_publish_patterns(ci, image_key):
+    scope_names = []
+    for job in ci["jobs"].values():
+        if job["image"] == image_key:
+            scope_names.extend(job.get("change_scopes", []))
+    return expand_change_scopes(ci, unique_values(scope_names))
+
+
+def image_publish_step(key, image, registry, commit, if_changed_patterns, emit_if_changed):
     ref = buildkite_ref(registry, image, commit)
     cache_ref = f"{registry}/{image['name']}:buildcache"
     login_command = (
@@ -43,16 +92,13 @@ def image_publish_step(key, image, registry, commit):
         ]
     )
 
-    return {
+    step = {
         "label": f":docker: publish {image['name']}",
         "key": f"publish_image_{key}",
         "agents": {"queue": image["runner"]["buildkite_queue"]},
-        "env": {
-            BUILDKITE_OCI_LOGIN_ENV: "1",
-            BUILDKITE_REGISTRY_ENV: registry,
-        },
         "command": "set -euo pipefail\n" + login_command + "\n" + build_command,
     }
+    return apply_if_changed(step, if_changed_patterns, emit_if_changed)
 
 
 def docker_plugin(image_ref, job):
@@ -78,10 +124,21 @@ def main():
     ci = config["ci"]
     registry = ci["registries"]["buildkite"]["ref_prefix"]
     commit = os.environ.get("BUILDKITE_COMMIT", "local")
+    branch = os.environ.get("BUILDKITE_BRANCH", "local")
+    emit_if_changed = should_emit_if_changed(ci, branch)
 
     steps = []
     for name, image in ci["images"].items():
-        steps.append(image_publish_step(name, image, registry, commit))
+        steps.append(
+            image_publish_step(
+                name,
+                image,
+                registry,
+                commit,
+                image_publish_patterns(ci, name),
+                emit_if_changed,
+            )
+        )
 
     for name, job in ci["jobs"].items():
         image_key = job["image"]
@@ -98,6 +155,7 @@ def main():
             },
             "plugins": [docker_plugin(image_ref, job)],
         }
+        apply_if_changed(step, scoped_patterns(ci, job), emit_if_changed)
         if job.get("artifacts"):
             step["artifact_paths"] = job["artifacts"]
         steps.append(step)

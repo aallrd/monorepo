@@ -1,9 +1,9 @@
 # CI Image Contract
 
 `images.yaml` is the source of truth for the current CI runtime contract:
-Linux CI queues, OCI image build definitions, command lists, test report paths,
-artifact paths, Buildkite registry metadata, and Jenkins Kubernetes runtime
-metadata.
+Linux CI queues, OCI image build definitions, Buildkite change scopes, command
+lists, test report paths, artifact paths, Buildkite registry metadata, and
+Jenkins Kubernetes runtime metadata.
 
 This contract is part of the broader SDLC exploration for a C++ and Java
 polyglot monorepo. It does not imply a final self-hosted, SaaS, or hybrid CI
@@ -29,6 +29,21 @@ Image definitions are repo-owned Dockerfiles. Buildkite publishes them to
 Buildkite Package Registry with `docker buildx build --push`; Jenkins publishes
 the same Dockerfiles to `MONOREPO_OCI_REGISTRY` with Kaniko.
 
+Buildkite generated steps use `if_changed` on non-`main` branches to avoid
+running unrelated monorepo slices. The generated pipeline omits `if_changed` on
+`main`, so post-merge builds remain full validation. Change scopes are declared
+in `images.yaml`:
+
+- `global` covers Buildkite and CI contract files. Any match runs all generated
+  Buildkite image publish and job steps.
+- `cpp` covers Bazel, C++ source, C++ toolchains, Buildifier, and the C++
+  build image.
+- `java` covers Maven configuration, Java source, and the Java/Maven build
+  image.
+
+Image publish steps use the union of their dependent job scopes. This keeps
+commit-tagged image publication aligned with the jobs that pull those images.
+
 Provider-specific behavior stays in the thin CI adapters:
 
 - Buildkite uploads paths from each job's `artifacts` field with
@@ -36,6 +51,10 @@ Provider-specific behavior stays in the thin CI adapters:
 - Buildkite publishes each image to
   `packages.buildkite.com/aallrd/monorepo-images/<image>:<commit>`, then runs
   each job through the pinned Docker plugin from that commit image.
+- Buildkite evaluates `if_changed` during `buildkite-agent pipeline upload`.
+  The bootstrap step sets `BUILDKITE_GIT_DIFF_BASE=origin/main` and
+  `BUILDKITE_FETCH_DIFF_BASE=true` so feature branches compare against a fresh
+  default branch ref.
 - Buildkite uses OIDC to authenticate to Buildkite Package Registry. Generated
   jobs opt into a `.buildkite/hooks/pre-command` Docker login before pulling
   private images.
@@ -65,11 +84,13 @@ Before relying on CI as a production signal:
    and run Docker-capable agents.
 2. Create the Buildkite Package Registry `monorepo-images` and grant this
    pipeline `read_packages` and `write_packages` through its OIDC policy.
-3. Ensure Jenkins exposes `MONOREPO_OCI_REGISTRY` and has the Kubernetes secret
+3. Ensure Buildkite agents are at least 3.117.0 so `if_changed` and
+   `BUILDKITE_FETCH_DIFF_BASE` are both supported.
+4. Ensure Jenkins exposes `MONOREPO_OCI_REGISTRY` and has the Kubernetes secret
    `monorepo-oci-docker-config` in the Jenkins agent namespace.
-4. Pin or mirror public base image tags by digest once the project leaves
+5. Pin or mirror public base image tags by digest once the project leaves
    exploration mode.
-5. Ensure the Java/Maven image includes Bash, Git, JDK 21, and Maven 3.9.
-6. Ensure each C++ Linux image exposes the normalized toolchain root expected by
+6. Ensure the Java/Maven image includes Bash, Git, JDK 21, and Maven 3.9.
+7. Ensure each C++ Linux image exposes the normalized toolchain root expected by
    the Bazel toolchains under `build/toolchains` and provides Bazel/Bazelisk.
-7. Ensure Jenkins has the Kubernetes, Pipeline Utility Steps, and JUnit plugins.
+8. Ensure Jenkins has the Kubernetes, Pipeline Utility Steps, and JUnit plugins.
