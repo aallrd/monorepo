@@ -3,9 +3,11 @@
 load("@bazel_tools//tools/build_defs/cc:action_names.bzl", "ACTION_NAMES")
 load(
     "@rules_cc//cc:cc_toolchain_config_lib.bzl",
+    "action_config",
     "feature",
     "flag_group",
     "flag_set",
+    "tool",
     "tool_path",
 )
 load("@rules_cc//cc/common:cc_common.bzl", "cc_common")
@@ -63,6 +65,20 @@ def _mode_feature(name, compile_flags, link_flags):
         flag_sets = flag_sets,
     )
 
+def _link_action_configs(tool_paths):
+    linker = tool_paths.get("ld")
+    if not linker:
+        return []
+
+    return [
+        action_config(
+            action_name = action,
+            enabled = True,
+            tools = [tool(path = linker)],
+        )
+        for action in _LINK_ACTIONS
+    ]
+
 def _fixed_cc_toolchain_config_impl(ctx):
     features = [
         _flag_feature("default_compile_flags", _COMPILE_ACTIONS, ctx.attr.compile_flags),
@@ -98,6 +114,7 @@ def _fixed_cc_toolchain_config_impl(ctx):
             tool_path(name = name, path = path)
             for name, path in ctx.attr.tool_paths.items()
         ],
+        action_configs = _link_action_configs(ctx.attr.tool_paths),
         builtin_sysroot = ctx.attr.builtin_sysroot,
         cxx_builtin_include_directories = ctx.attr.cxx_builtin_include_directories,
     )
