@@ -7,6 +7,19 @@ steps:
       BUILDKITE_FETCH_DIFF_BASE: "true"
     command: |
       set -euo pipefail
+      export UV_INSTALL_DIR="${HOME}/.local/bin"
+      export UV_NO_MODIFY_PATH=1
+      if ! command -v uv >/dev/null 2>&1; then
+        if command -v curl >/dev/null 2>&1; then
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+        elif command -v wget >/dev/null 2>&1; then
+          wget -qO- https://astral.sh/uv/install.sh | sh
+        else
+          echo "uv is required to generate the Buildkite pipeline, and neither curl nor wget is available to install it." >&2
+          exit 1
+        fi
+        export PATH="${UV_INSTALL_DIR}:${PATH}"
+      fi
       uv run --script .buildkite/generate_pipeline.py > .buildkite/generated-pipeline.yml
       buildkite-agent pipeline upload --dry-run < .buildkite/generated-pipeline.yml > /dev/null
       buildkite-agent artifact upload .buildkite/generated-pipeline.yml
