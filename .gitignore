@@ -3,3 +3,5 @@ third_party/bazel/
 .DS_Store
 target/
 .m2/
+__pycache__/
+*.py[cod]
